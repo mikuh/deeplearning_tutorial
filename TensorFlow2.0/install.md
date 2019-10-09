@@ -156,8 +156,88 @@ sudo apt-get install docker-ce docker-ce-cli containerd.io
 
 通过运行`hello-world`来验证是否正确安装：
 
+这个命令可能需要设置国内镜像...不然..很可能没法连接..
+
 ```
  sudo docker run hello-world
 ```
 
 此命令下载测试图像并在容器中运行。容器运行时，它会打印参考消息并退出。
+
+![](../images/3.png)
+
+
+
+## 安装 [nvidia-docker](https://github.com/NVIDIA/nvidia-docker)
+
+`nvidia-docker` 仅适用于 Linux
+
+检查GPU是否可用
+
+```
+lspci | grep -i nvidia
+```
+
+![](../images/4.png)
+
+安装nvidia-docker
+
+```
+sudo apt-get install -y nvidia-docker2
+sudo systemctl daemon-reload
+sudo systemctl restart docker
+```
+
+验证 `nvidia-docker` 安装：
+
+```
+sudo docker run --runtime=nvidia --rm nvidia/cuda nvidia-smi
+```
+
+这个地方可能会有一个很坑爹报错：`docker: Error response from daemon: Unknown runtime specified nvidia.`因为我一开始是按照github上的方法安装nvidia-docker的，后来改用apt来装就好了，如果还有问题，
+
+可以重新写了下`/etc/docker/daemon.json`文件，我是这么写的：
+
+```
+{
+  "registry-mirrors": [
+    "https://dockerhub.azk8s.cn",
+    "https://reg-mirror.qiniu.com"
+  ],
+  "runtimes": {
+        "nvidia": {
+            "path": "/usr/bin/nvidia-container-runtime",
+            "runtimeArgs": []
+         }	
+    }
+}
+```
+
+## 下载并运行支持 GPU 的 TensorFlow 映像
+
+```
+docker run -it --rm --runtime=nvidia tensorflow/tensorflow:latest-gpu-py3 python
+```
+
+设置支持 GPU 的映像可能需要一段时间。如果重复运行基于 GPU 的脚本，您可以使用 `docker exec` 重用容器。
+
+使用最新的 TensorFlow GPU 映像在容器中启动 `bash` shell 会话：
+
+```
+ docker run -it tensorflow/tensorflow:latest-gpu-py3 bash
+```
+
+![](../images/5.png)
+
+
+
+ok,到这里大功告成了。
+
+可以进入python环境试一下：
+
+```
+import tensorflow as tf
+tf.enable_eager_execution()
+print(tf.reduce_sum(tf.random_normal([1000, 1000])))
+```
+
