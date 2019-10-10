@@ -1,4 +1,3 @@
-<script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=default"></script>
 # 深入理解梯度下降和反向传播
 
 梯度下降就是一个求极值的方法，在深度学习里面用于最小化损失来训练权重和偏差。
