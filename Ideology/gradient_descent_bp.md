@@ -1,4 +1,4 @@
-# 深入理解梯度下降和反向传播
+# 理解梯度下降和反向传播
 
 梯度下降就是一个求极值的方法，在深度学习里面用于最小化损失来训练权重和偏差。
 
@@ -67,7 +67,7 @@ okay，现在我们已经知道用梯度下降来让网络学习权重和偏差�
 
 
 
-反向传播算法的核心在于如何通过最终的损失$C$ 计算网络中任意位置的权值$w$(或者偏差$b$)的偏导$\frac{\partial C}{\partial w}​$。
+反向传播算法的核心在于如何通过最终的损失$C​$ 计算网络中任意位置的权值$w​$(或者偏差$b​$)的偏导$\frac{\partial C}{\partial w}​$。
 
 很明显，其实最后一层的偏导是很好计算的，因为损失只要把样本$x$对应的标签$y$和输出激活$a​$，带到损失函数里就得到了，问题在于怎么计算前面层的损失。顾名思义，反向传播算法的精髓就是搞出了一种方法，可以把误差从后往前反向传播，这样就可以轻松的计算前面层权值的偏导了。
 
@@ -75,10 +75,38 @@ okay，现在我们已经知道用梯度下降来让网络学习权重和偏差�
 
 ![](../images/i2.png)
 
-根据上面的符号表达，我们可以很轻松的写出正向传播的递推公式，就上一层的的输出激活作为下一层的输入，然后经过线性运算再输出激活，这里使用向量化的形式：
+根据上面的符号表达，我们可以很轻松的写出正向传播的递推公式，就上一层的的输出激活作为下一层的输入，然后经过线性运算再输出$\sigma​$激活，这里使用向量化的形式：
 $$
 a^l=\sigma(w^la^{l-1}+b^l)
 $$
+为了计算$\frac{\partial C}{\partial w^l_{jk}}​$ 和$\frac{\partial C}{\partial b^l_{j}}​$ ，我们引入一个中间变量$\delta^l_j​$,称其为第$l​$层的第$j​$个神经元的误差：
+$$
+\delta^l_j = \frac{\partial C}{\partial z^l_j}
+$$
+按照惯例，我们用$\delta^l$来代表第$l$层的误差向量。
+
+根据微积分中求导的链式法则，有
+$$
+\delta^l_j = \frac{\partial C}{\partial a^l_j}\frac{\partial a^l_j}{\partial z^l_j}= \frac{\partial C}{\partial a^l_j}\sigma'(z^l_j)
+$$
+并且可以得到一个递推公式
+$$
+\delta^l_j =\sum_k \frac{\partial C}{\partial z^{l+1}_k} \frac{\partial z^{l+1}_k}{\partial z^l_j}=\sum_k \delta^{l+1}_k \frac{\partial z^{l+1}_k}{\partial z^l_j}\\ = \sum_k \delta^{l+1}_k \frac{\sum_j w^{l+1}_{kj}a^l_j+b^{l+1}_k}{\partial z^l_j}=\sum_k (\delta^{l+1}_k\sum_j w^{l+1}_{kj}\sigma'(z^l_j))
+$$
+写成矩阵的形式，就是
+$$
+\delta^l = ((w^{l+1})^T\delta^{l+1}) \bigodot \sigma'(z^l)
+$$
+这样我们就可以将误差从后往前传递了。
+
+那么这个误差和我们的偏导$\frac{\partial C}{\partial w^l_{jk}}​$ 又有什么联系呢？还是根据链式法则：
+$$
+\frac{\partial C}{\partial w^l_{jk}} = \frac{\partial C}{\partial z^l_{jk}} \frac{\partial z^l_{jk}}{\partial w^l_{jk}}= \delta^l_j a^{l-1}_k
+$$
+到此，整个反向传播的过程就连起来了。求偏差的偏导使用同样的方法即可。
+
+
+
 
 
 
