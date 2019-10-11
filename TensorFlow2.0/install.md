@@ -216,7 +216,7 @@ sudo docker run --runtime=nvidia --rm nvidia/cuda nvidia-smi
 ## 下载并运行支持 GPU 的 TensorFlow 映像
 
 ```
-docker run -it --rm --runtime=nvidia tensorflow/tensorflow:latest-gpu-py3 python
+sudo docker run -it --rm --runtime=nvidia tensorflow/tensorflow:latest-gpu-py3 python
 ```
 
 设置支持 GPU 的映像可能需要一段时间。如果重复运行基于 GPU 的脚本，您可以使用 `docker exec` 重用容器。
@@ -237,7 +237,6 @@ ok,到这里大功告成了。
 
 ```
 import tensorflow as tf
-tf.enable_eager_execution()
 print(tf.reduce_sum(tf.random_normal([1000, 1000])))
 ```
 
