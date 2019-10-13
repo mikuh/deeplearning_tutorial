@@ -224,7 +224,7 @@ sudo docker run -it --rm --runtime=nvidia tensorflow/tensorflow:latest-gpu-py3 p
 使用最新的 TensorFlow GPU 映像在容器中启动 `bash` shell 会话：
 
 ```
- docker run -it tensorflow/tensorflow:latest-gpu-py3 bash
+ sudo docker run -it tensorflow/tensorflow:latest-gpu-py3 bash
 ```
 
 ![](../images/5.png)
