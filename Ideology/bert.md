@@ -68,7 +68,7 @@ bert的词嵌入由三个嵌入token embedding、segment embedding,和position e
 
 但是，上面的embedding并没有包含词的位置信息。于是，我们的目标是能够根据词在句子中的位置适当调整这个向量，使它带上位置信息。
 
-作者选择的方法是使用预定的（非学习的）正余弦函数将$[-1,1] $ 之间的数字加到前面的embedding中，即通过正余弦函数将位置表示为彼此的线性组合，从而实现网络学习中标记位置之间的相对关系。在Token embedding 获得的矩阵$Z$ 的基础上加上位置矩阵$P​$  。
+作者选择的方法是使用预定的（非学习的）正余弦函数将$[-1,1] ​$ 之间的数字加到前面的embedding中，即通过正余弦函数将位置表示为彼此的线性组合，从而实现网络学习中标记位置之间的相对关系。在Token embedding 获得的矩阵$Z​$ 的基础上加上位置矩阵$P​$  。
 
 数学上，用$i$ 表示序列中标记的位置，用$j$ 表示token embedding特征向量中的位置：
 
@@ -99,9 +99,9 @@ $$
 
 #### Multi-Head Attention
 
-encoder中使用Transformer的多头注意力机制，这意味着它将计算$h$ 份不同权重矩阵的自注意力，然后将结果连接在一起。
+encoder中使用Transformer的多头注意力机制，这意味着它将计算$h​$ 份不同权重矩阵的自注意力，然后将结果连接在一起。
 
-这些并行注意力计算的结果称之为Head,我们用下标$i$ 来表示一个特定的head和相关的权重矩阵。
+这些并行注意力计算的结果称之为Head,我们用下标$i​$ 来表示一个特定的head和相关的权重矩阵。
 
 ![](../images/b6.png)
 
@@ -122,7 +122,154 @@ $$
 
 ![](../images/b8.png)
 
-上图描绘了$Q (Querys), K(Keys) , V(Values)​$ 是怎么来的
+上图描绘了一个Head的$Q (Querys), K(Keys) , V(Values)​$ 是怎么来的,其中的$W_i^K , W^Q_i​$ 的尺寸是 $d_{emb\_dim} * d_k​$ , 因为Q和K需要计算相似性，所以维度应当是相同的，$W_i^V​$ 的尺寸是$d_{emb\_dim} * d_v​$ ,$V​$ 的维度可以相同也可以不同,在论文中$d_k = d_v = emb\_dim /h​$ .
+$$
+XW_i^K = K_i \\
+XW_i^Q = Q_i \\
+XW_i^V = V_i
+$$
+所谓的自注意力，就是$Q_i$ 与$K_i^T$ 的点积进行$\sqrt {d_k}$ 的缩放之后通过softmax获得一个概率权重，然后用这些权重分别乘以各自的$V_i​$ 即可：
+$$
+Attention(Q_i,K_i,V_i) = softmax(\frac{Q_iK_i^T}{\sqrt{d_k}}) V_i
+$$
+为了加深理解，我们选择其中一个头，通过图形继续可视化的看一下这个变化过程：
 
+![](../images/b9.png)
 
+然后计算self-attention，
+
+![](../images/b10.png)
+
+多头的话就是同时有多个上述计算过程在进行：
+
+![](../images/b11.png)
+
+假设我们有8个Head,那么我们就获得8个$Z​$ :
+
+![](../images/b12.png)
+
+但是，显然前馈层只需要一个矩阵$Z$ ,怎么处理呢？类似多卷积核的处理，把这8个矩阵连起来，乘以一个权重矩阵$W^0 ​$压缩到一个矩阵。
+
+![](../images/b13.png)
+
+为了有一个更加全面直观的认识，我们把上面整个过程放到一个图里，
+
+![](../images/b14.png)
+
+显然，第二个encoder块是不需要embedding过程的，只要把第一个encoder块的输出作为输入即可。
+
+经过上面的介绍，你应该对这个过程已经有了足够的了解，但是，为什么可以利用向量点积来计算注意力概率呢？
+
+于是让我们进一步深入来了解其中的原理。
+
+这个结构体系的关键在于：
+$$
+Q_iK_i^T
+$$
+也就是每个词的q向量与每个词的k向量的点积，套用点积公式：
+$$
+qk = cos(q,k)\left \| q \right \|\left \| k \right \|
+$$
+这意味着$q$ 和$k$ 的方向越相似，长度越大，点积就越大。词与此之间关联越大，对于理解这个词时得到的关注越大，跟我们的本意是相同的。
+
+### Add & Norm
+
+我们再看一下最开头的结构示意图，每个encoder块在Multi-Head Attention之后经过一个 Add & Norm层才进入下一个块。于是我们来看一下这一层做了些什么。
+
+**Add**实际就是一个残差连接，将输出加上输入，这个在每一块的self-attenton以及FFN之后都会有，然后跟随一个Layer Norm 。
+
+**Norm** 是一个Layer Normlization，将$Z + X​$ 正则化，就是把它缩放到一个均值为0方差为1的域里。因为
+
+不过一般在这一层之前，就会有一个dropout层。
+
+### Position-wise Feed-Forward Network
+
+每个encoder块都由 mulit-head atteion $\to​$  add & Norm $\to​$ feed forword network $\to​$ add & Norm 这样一个过程，下面来介绍一下这个Feed-Forward Network。
+
+这是一个全连接层，包含两个线性变化和一个非线性函数（实际一般就是ReLu），
+
+![](../images/b15.png)
+
+对于输入的$x​$ (尺寸为$input\_length * emb\_dim​$) ,通过权重矩阵$W_1​$ (尺寸为$ emb\_dim * d_F ​$)和偏置$b_1​$ 线性变换到隐藏层 (尺寸为$input\_length * d_F​$ ) ,然后**ReLu **激活 ，记下来再用权重矩阵$W_2​$ (尺寸为$d_F * emb\_dim​$) 和偏置 $b_2​$ 的线性变换到输出层(尺寸为$input\_length * emb\_dim ​$ ) ,表示成数学公式就是:
+$$
+FFN(x) = max(0, xW_1+b_1)W_2 +b_2
+$$
+在最后一个encoder块输出之后连接到decoder。
+
+## Decoder
+
+Decoder和Encoder的结构是类似的，但是因为可视信息的不同，又有所差别。
+
+Transformer解决的是翻译的问题，将一个句子翻译成另一种语言，我们希望模型能够捕捉到输入句子中词之间的关系，并且将输入句子中包含的信息与每一步已翻译的内容结合起来。继续上面的例子，我们的目标是把一个句子从英文翻译为西班牙文，这是我们获得的序列标记:
+
+> X = [‘Hello’, ‘,’, ‘how’, ‘are’, ‘you’, ‘?’] (Input sequence)
+> Y = [‘Hola’, ‘,’, ‘como’, ‘estas’, ‘?’] (Target sequence)
+
+我们同之前一样来看看输入到输出数据是如何流动的。
+
+这是我们的解码器的输入标记：
+
+> [‘\<SS\>’, ’Hola’, ‘,’,  ‘ como’,  ‘estas’,  ‘?’]
+
+然后这是解码器的期望输出：
+
+> *[’Hola’, ‘,’, ‘ como’, ‘estas’, ‘?’,’\<EOS>’]*
+
+但是，这里存在一个问题，比如输入这边我们已经看到了'como' 的后面是'estas'， 然后再用它来预测'estas' ，这显然是不合理的，因为模型在测试的时候是看不到后面的词的。
+
+因此，我们需要修改注意力层，防止模型可以看到预测词右边的信息，与此同时，它能利用已经预测的词，即左边的信息。
+
+继续上面的例子，我们将输入标记转换成矩阵的形式，并添加位置信息：
+
+![](../images/b16.png)
+
+和encoder一样，decoder块的输出也将是大小为$target\_length * emb\_dim​$ 的矩阵，在逐行线性变换+softmax激活后，将生成一个举证，其中每行的最大元素表示下一个单词。也就是说，分配"\<SS>" 的行负责预测“Hola”， 分配"Hola"的行负责预测"," ...以此类推。比如，为了预测"estas"， 我们将允许该行直接和下图中绿色区域互动，而不能和红色区域互动：
+
+![](../images/b17.png)
+
+但是，在我们使用多头注意力机制的时候，所有的行都会产生交互，因此需要在输入的时候添加遮罩，这个遮罩会在注意力计算之后进行：
+$$
+\frac{Q_iK_i^T}{\sqrt{d_k}}
+$$
+这是**self-attention**的计算结果：
+
+![](../images/b18.png)
+
+然后我们在此基础上添加遮掩，就是把矩阵上三角的位置全部设置为$- \infin $ ：
+
+![](../images/b19.png)
+
+于是，在进行softmax激活之后，矩阵就变成了：
+
+![](../images/b20.png)
+
+恰好达到了我们的要求，那些需要在训练时忽略的右侧的词的注意力全部变成了0。
+
+当将这个注意力矩阵与$V_i​$ 相乘时，预测的词就是模型可以访问元素右边的元素。注意，这里的多头注意力输出将是$target\_length * emb\_dim​$ 维的，因为它的序列长度是$target\_length​$ 。 
+
+这个就是**Decoder**从**target序列**的输入，并经过**Masked Multi-Head Attention** 的一个变化得到了$D$，decoder的还有一部分输入来自于源语句经过**Encoder**的最终输出$E$ (尺寸是 $input\_length * emb\_dim $ )。
+
+接下来，就是与encoder一样的 Multi-Head Attention $ \to$ Add and Layer Norm -> FFN 的过程。
+
+只不过，现在的$Q$ 来自于 $D$ ,而$K , V$ 来自于$E$:
+$$
+DW_i^Q = Q_i   ~~~~(size:target\_length * d_k) \\
+EW_i^K = K_i   ~~~~(size:input\_length * d_k) \\
+EW_i^V = V_i   ~~~~(size:input\_length * d_v)
+$$
+计算每个query相对于key的注意力之后，得到的是一个$target\_length * input\_length​$ 的矩阵， 继续咱们的例子，比如注意力矩阵为：
+
+![](../images/b21.png)
+
+如上图所见，这个注意力是当前Decoder输入与Encoder输出的每个词之间的注意力，咱们用这个矩阵再乘以$V​$ ,就得到了一个$target\_length * d_v​$ 的矩阵，每一行代表了源语句相对于当前输入词汇的特征：
+
+![](../images/b22.png)
+
+![](../images/b23.png)
+
+h个Head连接起来，尺寸变为 $target\_length * d_v * h ​$ ,它通过$d_v * h * emb\_dim ​$的权重矩阵$W_0​$ 线性变换到一个$target\_length * emb\_dim ​$ 的输出。
+
+这在多个Decoder之后，最后输出的矩阵通过乘以权重矩阵$W_1$ ($emb\_dim * vocab\_size$) 进行线性变换，变换之后再对每一行的向量softmax, 其中选择值最大位置对应词表索引的词就是预测的词。
+
+损失的话只需要用预测的每个词向量与真实的词的one-hot词表示计算交叉熵即可。
 
