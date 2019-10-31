@@ -6,7 +6,7 @@
 
 从Bert模型所带来的NLP界里程碑式的影响和所取得的成就来看，无疑Bert将会是未来两三年NLP应用发展的基石，于是有必要仔细的看看其模型的结构，数据是如何流动的，训练的和测试的。
 
-不得不说现在的学习环境相对几年前好太多了，本文主要参考了以下几篇文章：
+不得不说现在的学习环境相对几年前好太多了，本文主要参考了以下几篇文章,然后加了点自己的理解：
 
 [Dissecting BERT Part 1: The Encoder](https://medium.com/dissecting-bert/dissecting-bert-part-1-d3c3d495cdb3)
 
