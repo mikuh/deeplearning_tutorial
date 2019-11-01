@@ -14,6 +14,7 @@
 - [n-gram及神经网络语言模型](https://mikuh.github.io/2019-10-17/%E7%90%86%E8%A7%A3ngram%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B%E5%92%8C%E7%A5%9E%E7%BB%8F%E7%BD%91%E7%BB%9C%E8%AF%AD%E8%A8%80%E6%A8%A1%E5%9E%8B)
 - [attention机制](https://mikuh.github.io/2019-10-22/%E7%90%86%E8%A7%A3Attention%E6%9C%BA%E5%88%B6)
 - [Bert](https://mikuh.github.io/2019-10-25/%E7%90%86%E8%A7%A3Bert)
+- [Selective Search](https://mikuh.github.io/2019-10-31/Selective-Search%E5%8E%9F%E7%90%86)
 
 ## TensorFlow2.0
 
